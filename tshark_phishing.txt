@@ -1,0 +1,34 @@
+# 1. what type of objects can be exported from this PCAP?
+# for list of filetypes: look at man pages (man tshark), see can use:
+tshark --export-objects help    # returns filetypes possible to export
+tshark -nr pcap_challenge.pcap | grep <filetype, e.g. ftp, http, dicom>
+# surely there's a tshark-only equivalent (for previous command) but didn't look into it
+# we see http and this is accepted. maybe a fuller answer is to actually export all types and see if exported.
+
+# 2. what is the file name of the largest file we can export?
+# note for this answer, assumed downloaded via http due to answer from 1. 
+# see files that were downloaded (attempted&successful downloads) (via http)
+tshark -nr pcap_challenge.pcap -Y "http.data_file"    # we see what files were attempted to be downloaded
+# or to see only successfully downloaded (via http)
+tshark -nr pcap_challenge.pcap -Y "http.data_file == 200 and http.response_for.uri"
+# equally to list (and sort name of files) of the files that we can export from http requests.
+tshark -nr <pcap_file> -T fields -e http.request.uri | sort -u
+
+# can also export object via: tshark -nr pcap_challenge.pcap --export-objects <filetype, e.g. http>,<dir to export to>
+mkdir exports
+tshark -nr pcap_challenge.pcap --export-objects http,exports    # given answer for 1 was http, we use http
+ls -l exports    # we see app(1).php (i.e app.php), is largest
+
+# 3. what packet number starts that app.php file
+tshark -nr pcap_challenge.pcap -Y "http.file_data and http.response.code == 200"
+# we have 2 options (8,687), the 2nd is accepted (687), not sure why. Maybe associated with download of app.php?
+
+# 4. what is the IP of the apache server
+# assuming this is for 687 packet (my attempt to identify packet via apache server failed):
+192.185.57.242
+# according to https://offsec.almond.consulting/sans-christmas-challenge-2022.html, 
+# since http response of 687 is 200, the source IP corresponds to the apache server
+
+# 5. What file is saved to the infected host?
+# look in exported app\(1).php we exported in question 2. via " --export-objects http, exports"
+# we see file saved to Ref_Sept24-2020.zip (line 68)
